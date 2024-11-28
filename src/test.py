@@ -43,24 +43,25 @@ Numpy 实现了运算符重载，使用 @ 可以代替 np.matmul()
 """
 矩阵点乘，就是矩阵各个对应元素相乘，要求矩阵必须维数相等，即MxN维矩阵乘以MxN维矩阵 。
 """
-# a = np.array([1, 2])
-# b = np.array([3, 4])
-# np.dot(a, b)
+a = np.array([1, 2])
+b = np.array([3, 4])
+print(np.dot(a, b))  # 11
+print(np.multiply(a, b))  # [3 8]
 
 # for i in range(1, 2):
 #     print(i)
 
 """向量的模"""
 
-
-def quadratic_cost_function(h, y):
-    # 计算二次代价函数
-    J = (h - y) ** 2 / (2 * len(y))
-    return J.sum()
-
-
-a = np.array([[1], [2]])
-b = np.array([[3], [4]])
-m = [(a - y) ** 2 / 2 for a, y in zip(a, b)]
-print(m)
-print(np.sum(m))  #
+#
+# def quadratic_cost_function(h, y):
+#     # 计算二次代价函数
+#     J = (h - y) ** 2 / (2 * len(y))
+#     return J.sum()
+#
+#
+# a = np.array([[1], [2]])
+# b = np.array([[3], [4]])
+# m = [(a - y) ** 2 / 2 for a, y in zip(a, b)]
+# print(m)
+# print(np.sum(m))  #

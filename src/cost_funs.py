@@ -8,6 +8,10 @@ class DefaultCost:
     def cost(ax_s, y_s):
         return np.abs(y_s - ax_s)
 
+    @staticmethod
+    def cost_prime(ax_s, y_s):
+        return 1 if ax_s > y_s else -1
+
     @classmethod
     def info(cls):
         print('{}'.format(cls.fun_name))
@@ -22,6 +26,10 @@ class MeanSquaredErrorCost(DefaultCost):
     fun_name = 'mean_squared_error'
 
     @staticmethod
+    def cost_prime(ax_s, y_s):
+        return y_s - ax_s
+
+    @staticmethod
     def cost(ax_s, y_s):
         return np.mean((y_s - ax_s) ** 2)
 
@@ -31,15 +39,18 @@ class QuadraticCost(DefaultCost):
     fun_name = 'quadratic_cost'
 
     @staticmethod
-    def cost(a_vector, y_vector):
+    def cost_prime(ax_s, y_s):
+        return ax_s - y_s
+
+    @staticmethod
+    def cost(ax_s, y_s):
         """
         计算单次输出与预期的二次代价值
-        :param a_vector:  N * 1 的矩阵
-        :param y_vector:  N * 1 的矩阵
+        :param ax_s:  N * 1 的矩阵
+        :param y_s:  N * 1 的矩阵
         :return:
         """
-        return np.sum([(a - y) ** 2 / 2 for a, y in zip(a_vector, y_vector)])
-
+        return np.sum([(a - y) ** 2 / 2 for a, y in zip(ax_s, y_s)])
 
 # print(DefaultActFunc.info())
 # print(MeanSquaredErrorCost.cost(np.array([[1, 2], [1, 2]]), np.array([[3, 4], [3, 4]])))

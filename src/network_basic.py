@@ -2,51 +2,12 @@
 s型神经元 、反向传播基本实现
 """
 import time
+import random
 
 import numpy as np
 import activation_funs
 import cost_funs
-
-
-class FullConnectionLayer:
-    """全连接层"""
-
-    def __init__(self, pre_layer_size, size, activation_function, is_output=False):
-        """
-        :param size: 自身规模
-        :param pre_layer_size: 前输入层的规模
-        """
-        if size < 1 or pre_layer_size < 1:
-            raise ValueError(
-                'invalid params for FullConnectionLayer: size {} pre_layer size {}'.format(size, pre_layer_size))
-        self.size = size
-        self.pre_layer_size = pre_layer_size
-        # self.weights = np.random.randn(size, pre_layer_size)
-        # self.biases = np.random.randn(size, 1)
-        self.weights = np.ones((size, pre_layer_size))
-        self.biases = np.ones((size, 1))
-        self.activation_fun = activation_function
-        self.is_output = is_output
-
-    def forward(self, input_x):
-        """
-        计算本层的output_z output_a
-        :param input_x:
-        :return: output_z, output_a
-        """
-        output_z = np.matmul(self.weights, input_x) + self.biases
-        output_a = self.activation_fun.active(output_z)
-        return output_z, output_a
-
-    def info(self):
-        """
-        print info about this layer
-        :return:
-        """
-        print('size :{}  input_size: {} Activation fun : {} '.format(self.size, self.pre_layer_size,
-                                                                     self.activation_fun.get_name()))
-        print('Weights[{}] :{} '.format(self.weights.shape, self.weights))
-        print('Biases :{} '.format(self.biases))
+import full_con_layer
 
 
 class NetworkBasic:
@@ -69,10 +30,11 @@ class NetworkBasic:
         self.layers = []
         # 构造每一层，使用sigmoid激活函数
         for i in range(1, self.num_layers - 1):
-            self.layers.append(FullConnectionLayer(layer_sizes[i - 1], layer_sizes[i], activation_funs.Sigmoid))
+            self.layers.append(
+                full_con_layer.FullConnectionLayer(layer_sizes[i - 1], layer_sizes[i], activation_funs.Sigmoid))
         # 最后一层单独考虑，暂时不使用激活函数
         self.layers.append(
-            FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.DefaultActFunc,True))
+            full_con_layer.FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.Sigmoid, True))
 
     def forward(self, input_x):
         """
@@ -117,23 +79,53 @@ class NetworkBasic:
         """
         return
 
-    def backward(self, o_z, o_a):
+    def backward(self, input_x, expect_y, o_z, o_a, mini_num):
         """
         从输出层往输入层，逐层计算各参数偏导
+        :param mini_num: 小样本数量
+        :param expect_y:
+        :param input_x:
         :param o_z:
         :param o_a:
         :return:
         """
         for layer in reversed(self.layers):
-            if layer.is_output:
-                pass
+            if layer.is_output:  # 首先执行的
+                layer.factor = self.cost_fun.cost_prime(layer.output_a,
+                                                        expect_y) * layer.activation_fun.active_derivative(
+                    layer.output_z)
+                layer.degrade_b += layer.factor / mini_num
+                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T) / mini_num
             else:
-                pass
+                layer.factor = np.matmul(next_layer.weights.T,
+                                         next_layer.factor) * layer.activation_fun.active_derivative(
+                    layer.output_z)
+                layer.degrade_b += layer.factor / mini_num
+                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T) / mini_num
 
+            next_layer = layer  # 传到下一次计算
 
-    def train_degrade(self, train_data, learning_rate, num_epochs):
+    def step(self, l_rate):
+        """
+        使用计算出来的偏导优化参数
+        :return:
+        """
+        for layer in self.layers:
+            layer.step(l_rate)
+
+    def clear(self):
+        """
+        清楚当前的梯度数据
+        :return:
+        """
+        for layer in self.layers:
+            layer.clear()
+
+    def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None):
         """
          梯度下降算法训练
+        :param test_data:
+        :param mini_num:
         :param train_data: 输入的训练数据的格式
             input_xs = [np.array([1, 2, 3]).reshape((3, 1))]
             expect_ys = [np.array([4, 5]).reshape(2, 1)]
@@ -143,49 +135,73 @@ class NetworkBasic:
         :return:
         """
         last_checked_ts = time.time()
-        batch_epoch = 10
+        epoch_print_threshold = 1
+        # mini_num = len(train_data)  # mini_num
+
         for epoch in range(num_epochs):
-            if epoch % batch_epoch == 0:
+            if epoch % epoch_print_threshold == 0:
                 last_checked_ts = time.time()
-                print("Epoch {}/{} begin".format(epoch + 1, num_epochs))
+                # print("Epoch {}/{} begin".format(epoch + 1, num_epochs))
 
             a_s = []
             cast_s = []
-            for x, y in train_data:
-                # 这里输入和输出拆成了单个一对一对的
-                o_z, o_a = self.forward(x)
-                a_s.append(o_a[-1])  # 记录网络最终的输出，用于计算评估代价
-                cast_s.append(self.cost(o_a[-1], y))  # 每个输入输出对应一个代价值
-                # TODO：对应每次输出，计算当前x输入下的各参数偏导
-                self.backward(o_z, o_a)
-                # TODO: 优化成小批量的算法
+            random.shuffle(train_data)
+            mini_train_batches = [
+                train_data[k:k + mini_num]
+                for k in range(0, len(train_data), mini_num)]
+            for mini_train_data in mini_train_batches:
+                self.clear()  # 清理梯度信息，为这次迭代做准备；
+                for x, y in mini_train_data:
+                    # 这里输入和输出拆成了单个一对一对的
+                    o_z, o_a = self.forward(x)
+                    a_s.append(o_a[-1])  # 记录网络最终的输出，用于计算评估代价
+                    cast_s.append(self.cost(o_a[-1], y))  # 每个输入输出对应一个代价值
+                    # 对应每次输出，计算当前x输入下的各参数偏导  backward 反向传播
+                    self.backward(x, y, o_z, o_a, mini_num)
 
-            cost = np.mean(cast_s)
-            # TODO：所有偏导求（整体样本空间的）均值；
-
-            # TODO：使用偏导，结合学习率，修正参数；
-            # self.
-
+                cost = np.mean(cast_s)
+                # 使用偏导，结合学习率，修正参数；
+                self.step(learning_rate)
             # 一次epoch完成
 
-            print("output: {}".format(a_s))
-            print("Cost: {:.6f}".format(cost))
+            # print("Output: {}".format(a_s))
 
-            if epoch % batch_epoch == 0:
-                print("Epoch {}/{} end, spend {:.2f}s".format(epoch + 1, num_epochs, time.time() - last_checked_ts))
+            if epoch % epoch_print_threshold == 0:
+                if test_data:
+                    print(
+                        "Epoch {}/{} end, cost {:.6f}, "
+                        "took {:.2f}s, accuracy {}/{}".format(epoch + 1, num_epochs, cost,
+                                                              time.time() - last_checked_ts,
+                                                              self.evaluate(test_data),
+                                                              len(test_data)))
+                else:
+                    print("Epoch {}/{} end, cost {:.6f} "
+                          "took {:.2f}s".format(epoch + 1, num_epochs, cost,
+                                                time.time() - last_checked_ts))
 
+        print("Train end!")
 
-net = NetworkBasic(layer_sizes=[3, 2, 2], cost_fun=cost_funs.QuadraticCost)
-net.info()
-# output = net.forward([[[1], [1], [1]], [[1], [1], [1]]])
-# print(output)
-# training_inputs = [np.reshape(x, (784, 1)) for x in tr_d[0]]
-# training_results = [vectorized_result(y) for y in tr_d[1]]
-# training_data = list(zip(training_inputs, training_results))
-tr_dx = [[1, 1, 1], [1, 1, 1]]
-tr_dy = [[1, 1], [1, 1]]
-input_xs = [np.reshape(x, (3, 1)) for x in tr_dx]
-expect_ys = [np.reshape(y, (2, 1)) for y in tr_dy]
-trains = list(zip(input_xs, expect_ys))  # data like pre
-print('train datas :{}'.format(trains))
-net.train_degrade(trains, 0.01, 1)
+    def evaluate(self, test_data):
+        """
+        验证结果
+        :param test_data:
+        :return:
+        """
+        test_results = []
+        for (x, y) in test_data:
+            _, a = self.forward(x)
+            test_results.append((np.argmax(a[-1]), y))
+        return sum(int(x == y) for (x, y) in test_results)
+
+# net = NetworkBasic(layer_sizes=[4, 3, 2], cost_fun=cost_funs.QuadraticCost)
+# net.info()
+# # output = net.forward([[[1], [1], [1]], [[1], [1], [1]]])
+# # print(output)
+# tr_dx = [[1, 1, 1, 1], [1, 1, 1, 1]]
+# tr_dy = [[5, 5], [5, 5]]
+# input_xs = [np.reshape(x, (4, 1)) for x in tr_dx]
+# expect_ys = [np.reshape(y, (2, 1)) for y in tr_dy]
+# trains = list(zip(input_xs, expect_ys))  # data like pre
+# print('Train datas :{}'.format(trains))
+# net.train_degrade(trains, 0.1, 100)
+# net.info()

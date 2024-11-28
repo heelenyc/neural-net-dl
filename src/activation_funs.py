@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import expit
 
 
 class DefaultActFunc:
@@ -28,11 +29,15 @@ class Sigmoid(DefaultActFunc):
     @staticmethod
     def active(z):
         """The sigmoid function."""
-        return 1.0 / (1.0 + np.exp(-z))
+        if np.all(z >= 0):  # 对sigmoid函数优化，避免出现极大的数据溢出
+            return 1.0 / (1 + np.exp(-z))
+        else:
+            return np.exp(z) / (1 + np.exp(z))
+        # return expit(z)
 
     @staticmethod
-    def active_derivative(x):
-        a = Sigmoid.active(x)
+    def active_derivative(z):
+        a = Sigmoid.active(z)
         return a * (1 - a)
 
 # print(DefaultActFunc.info())
