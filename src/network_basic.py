@@ -36,9 +36,10 @@ class NetworkBasic:
         self.layers.append(
             full_con_layer.FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.Sigmoid, True))
 
-    def forward(self, input_x):
+    def forward(self, input_x, update_self=False):
         """
         根据单个参数计算网络输出，需要记录计算过程中每一层的中间产出
+        :param update_self:
         :param input_x:
         :return:output_z, output_a
         """
@@ -47,7 +48,7 @@ class NetworkBasic:
         output_a = []
         x = input_x
         for layer in self.layers:
-            o_z, o_a = layer.forward(x)
+            o_z, o_a = layer.forward(x, update_self)
             output_z.append(o_z)
             output_a.append(o_a)
             x = o_a
@@ -121,9 +122,10 @@ class NetworkBasic:
         for layer in self.layers:
             layer.clear()
 
-    def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None):
+    def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None, dynamic_lr=False):
         """
          梯度下降算法训练
+        :param dynamic_lr: 动态学习率
         :param test_data:
         :param mini_num:
         :param train_data: 输入的训练数据的格式
@@ -145,38 +147,58 @@ class NetworkBasic:
 
             a_s = []
             cast_s = []
+            factor_lr = 0.1
+            pre_cost = 0.0
+
+            # 随机批量，加快学习；
             random.shuffle(train_data)
             mini_train_batches = [
                 train_data[k:k + mini_num]
                 for k in range(0, len(train_data), mini_num)]
+
             for mini_train_data in mini_train_batches:
                 self.clear()  # 清理梯度信息，为这次迭代做准备；
+                mini_cost_s = []
                 for x, y in mini_train_data:
                     # 这里输入和输出拆成了单个一对一对的
-                    o_z, o_a = self.forward(x)
+                    o_z, o_a = self.forward(x, True)
                     a_s.append(o_a[-1])  # 记录网络最终的输出，用于计算评估代价
-                    cast_s.append(self.cost(o_a[-1], y))  # 每个输入输出对应一个代价值
+                    cur_cost = self.cost(o_a[-1], y)
+                    cast_s.append(cur_cost)  # 每个输入输出对应一个代价值
+                    mini_cost_s.append(cur_cost)
                     # 对应每次输出，计算当前x输入下的各参数偏导  backward 反向传播
                     self.backward(x, y, o_z, o_a, mini_num)
 
-                cost = np.mean(cast_s)
+                # 动态调整学习率
+                if dynamic_lr:
+                    mini_cost = np.mean(mini_cost_s)
+                    if pre_cost > 0.0:
+                        delta_cost = mini_cost - pre_cost
+                        r = delta_cost / pre_cost
+                        if r < 0:  # 代价在下降并且下降的比较慢，想维持一定的速度
+                            learning_rate += factor_lr
+                        if r > 0 and learning_rate > factor_lr:  # 代价回升，往回学习
+                            learning_rate -= factor_lr
+
+                    pre_cost = mini_cost
+
                 # 使用偏导，结合学习率，修正参数；
                 self.step(learning_rate)
-            # 一次epoch完成
 
-            # print("Output: {}".format(a_s))
+            epoch_cost = np.mean(cast_s)
+            # 一次epoch完成
 
             if epoch % epoch_print_threshold == 0:
                 if test_data:
                     print(
-                        "Epoch {}/{} end, cost {:.6f}, "
-                        "took {:.2f}s, accuracy {}/{}".format(epoch + 1, num_epochs, cost,
+                        "Epoch {}/{} end, cost {:.6f}, lr:{:.2f} "
+                        "took {:.2f}s, accuracy {}/{}".format(epoch + 1, num_epochs, epoch_cost, learning_rate,
                                                               time.time() - last_checked_ts,
                                                               self.evaluate(test_data),
                                                               len(test_data)))
                 else:
-                    print("Epoch {}/{} end, cost {:.6f} "
-                          "took {:.2f}s".format(epoch + 1, num_epochs, cost,
+                    print("Epoch {}/{} end, cost {:.6f} lr:{:.2f} "
+                          "took {:.2f}s".format(epoch + 1, num_epochs, epoch_cost, learning_rate,
                                                 time.time() - last_checked_ts))
 
         print("Train end!")

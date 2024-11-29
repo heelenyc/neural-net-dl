@@ -29,16 +29,22 @@ class FullConnectionLayer:
         self.degrade_b = np.zeros((size, 1))
         self.degrade_w = np.zeros((size, pre_layer_size))
 
-    def forward(self, input_x):
+    def forward(self, input_x, update_self=False):
         """
         计算本层的output_z output_a
+        :param update_self: 是否更新自己的状态
         :param input_x:
         :return: output_z, output_a
         """
-        self.input_x = input_x
-        self.output_z = np.matmul(self.weights, input_x) + self.biases
-        self.output_a = self.activation_fun.active(self.output_z)
-        return self.output_z, self.output_a
+        if update_self:
+            self.input_x = input_x
+            self.output_z = np.matmul(self.weights, input_x) + self.biases
+            self.output_a = self.activation_fun.active(self.output_z)
+            return self.output_z, self.output_a
+        else:
+            output_z = np.matmul(self.weights, input_x) + self.biases
+            output_a = self.activation_fun.active(output_z)
+            return output_z, output_a
 
     def info(self):
         """
