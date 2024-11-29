@@ -40,10 +40,13 @@ trains, validates, tests = mnist_loader.load_data_wrapper()
 # net.train_degrade(trains, 3, 30, 100, tests, True)
 
 
+# Epoch 30/30 end, cost 0.039751, lr:10.00 took 17.52s, accuracy 9393/10000
 # net = nt.NetworkBasic(layer_sizes=[784, 20, 10], cost_fun=cost_funs.QuadraticCost)
 # net.train_degrade(trains, 3, 30, 100, tests, True)
 
-net = nt.NetworkBasic(layer_sizes=[784, 20, 10], cost_fun=cost_funs.QuadraticCost)
+# Epoch 30/30 end, cost 0.017528, lr:2.40 took 35.51s, accuracy 9455/10000
+# 更多的隐藏层，并不能带来更多的准确率
+net = nt.NetworkBasic(layer_sizes=[784, 100, 20, 10], cost_fun=cost_funs.QuadraticCost)
 net.train_degrade(trains, 3, 30, 100, tests, True)
 
 # net.info()  # weight 的梯度因为输入极其稀疏的原因，同样也很稀疏
