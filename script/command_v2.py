@@ -13,18 +13,21 @@ trains, validates, tests = mnist_loader.load_data_wrapper()
 v2 版本， 集中在network里计算
 输出层的激活函数直接输出，效果更好，学习更快更准确
 更大的隐藏层不能带来更明显的效果
-小样本随机梯度可以加快学习
+小样本随机梯度可以加快学习，因为随机小样本迭代的特点：快速获得特征，小步调整，更敏捷；也并不是越小越好
 单次训练迭代的样本太大效果不一定好，可能会拟合更多的非有效特征导致过拟合问题（跟样本拟合很好，代价很小，但是验证精度反而更低）
+动态调整学习率没有确定有效的加速或减速逻辑，验证效果不稳定
+全连接层的准确率极限在97%左右
+exp(z) 容易溢出，没有特别好的解决办法；
 """
 # Epoch 30/30 end, cost 0.041856, took 20.91s, accuracy 9400/10000
 # vs
 # Epoch 30/30 end, cost 0.020091, lr:8.40 took 14.51s, accuracy 9607/10000
 # net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost)
 # Epoch 30/30 end, cost 0.018822, lr:15.00 took 21.57s, accuracy 9656/10000
-net = nt.NetworkBasic(layer_sizes=[784, 100, 10], cost_fun=cost_funs.QuadraticCost,
-                      output_atv_fun=activation_funs.DefaultActFunc)
+net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost,
+                      output_atv_fun=activation_funs.Sigmoid)
 net.info()
-net.train_degrade(trains, 3, 30, 100, tests, True)
+net.train_degrade(trains, 3, 30, 20, tests, True)
 
 # Epoch 30/30 end, cost 0.041353, took 22.85s, accuracy 9382/10000
 # Epoch 28/30 end, cost 0.083697, took 23.80s, accuracy 8572/10000

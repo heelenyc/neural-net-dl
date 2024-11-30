@@ -36,9 +36,9 @@ class Sigmoid(DefaultActFunc):
             return np.exp(z) / (1 + np.exp(z))
         # return expit(z)
         """
-        if np.any(z > 100) or np.any(z < -100):
-            pass
-            # print(z)
+        # if np.any(z > 100) or np.any(z < -100):
+        #     pass
+        #     # print(z)
         return 1.0 / (1 + np.exp(-z))
 
     @staticmethod
@@ -46,4 +46,6 @@ class Sigmoid(DefaultActFunc):
         a = Sigmoid.active(z)
         return a * (1 - a)
 
-# print(DefaultActFunc.info())
+
+# print(Sigmoid.active(np.array([1, 2, 3, -1000000])))
+# print(np.exp(10000))

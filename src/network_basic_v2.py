@@ -48,11 +48,18 @@ class NetworkBasic:
         # 逐层向前计算输出
         output_z = []
         output_a = [input_x]
-        for w_s, b_s in zip(self.weights, self.biases):
+        for w_s, b_s in zip(self.weights[:-1], self.biases[:-1]):
             o_z = np.matmul(w_s, output_a[-1]) + b_s
             o_a = self.atv_fun.active(o_z)
             output_z.append(o_z)
             output_a.append(o_a)
+
+        # 最后一层
+        o_z = np.matmul(self.weights[-1], output_a[-1]) + self.biases[-1]
+        o_a = self.output_atv_fun.active(o_z)
+        output_z.append(o_z)
+        output_a.append(o_a)
+
         # 网络的输出
         return output_z, output_a
 
@@ -126,13 +133,13 @@ class NetworkBasic:
 
                 # 动态调整学习率
                 if dynamic_lr:
-                    cur_mini_cost = np.mean(mini_cost_s)  # 计算代价很耗时
+                    cur_mini_cost = mini_cost_s  # 计算代价很耗时
                     if pre_mini_cost > 0.0:
                         delta_cost = cur_mini_cost - pre_mini_cost
                         r = delta_cost / pre_mini_cost
                         if r < 0:  # 代价在下降并且下降的比较慢，想维持一定的速度
                             learning_rate += factor_lr
-                        if r > 0 and learning_rate > factor_lr:  # 代价回升，往回学习
+                        if r > 0 and learning_rate > factor_lr * 10:  # 代价回升，往回学习
                             learning_rate -= factor_lr
 
                     pre_mini_cost = cur_mini_cost
