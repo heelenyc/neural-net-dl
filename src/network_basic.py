@@ -34,7 +34,7 @@ class NetworkBasic:
                 full_con_layer.FullConnectionLayer(layer_sizes[i - 1], layer_sizes[i], activation_funs.Sigmoid))
         # 最后一层单独考虑，暂时不使用激活函数
         self.layers.append(
-            full_con_layer.FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.Sigmoid, True))
+            full_con_layer.FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.DefaultActFunc, True))
 
     def forward(self, input_x, update_self=False):
         """
@@ -55,31 +55,6 @@ class NetworkBasic:
         # 网络的输出
         return output_z, output_a
 
-    def cost(self, input_as, output_ys):
-        """
-        计算代价
-        :param input_as:
-        :param output_ys:
-        :return:
-        """
-        return self.cost_fun.cost(input_as, output_ys)
-
-    def save(self, filename):
-        """
-        网络参数持久化
-        :param filename:
-        :return:
-        """
-        return
-
-    def load(self, filename):
-        """
-        加载网络参数
-        :param filename:
-        :return:
-        """
-        return
-
     def backward(self, input_x, expect_y, o_z, o_a, mini_num):
         """
         从输出层往输入层，逐层计算各参数偏导
@@ -95,32 +70,24 @@ class NetworkBasic:
                 layer.factor = self.cost_fun.cost_prime(layer.output_a,
                                                         expect_y) * layer.activation_fun.active_derivative(
                     layer.output_z)
-                layer.degrade_b += layer.factor / mini_num
-                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T) / mini_num
+                layer.degrade_b += layer.factor
+                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T)
             else:
                 layer.factor = np.matmul(next_layer.weights.T,
                                          next_layer.factor) * layer.activation_fun.active_derivative(
                     layer.output_z)
-                layer.degrade_b += layer.factor / mini_num
-                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T) / mini_num
+                layer.degrade_b += layer.factor
+                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T)
 
             next_layer = layer  # 传到下一次计算
 
-    def step(self, l_rate):
+    def step(self, l_rate, mini_num):
         """
         使用计算出来的偏导优化参数
         :return:
         """
         for layer in self.layers:
-            layer.step(l_rate)
-
-    def clear(self):
-        """
-        清楚当前的梯度数据
-        :return:
-        """
-        for layer in self.layers:
-            layer.clear()
+            layer.step(l_rate, mini_num)
 
     def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None, dynamic_lr=False):
         """
@@ -183,7 +150,7 @@ class NetworkBasic:
                     pre_cost = mini_cost
 
                 # 使用偏导，结合学习率，修正参数；
-                self.step(learning_rate)
+                self.step(learning_rate, mini_num)
 
             epoch_cost = np.mean(cast_s)
             # 一次epoch完成
@@ -214,6 +181,39 @@ class NetworkBasic:
             _, a = self.forward(x)
             test_results.append((np.argmax(a[-1]), y))
         return sum(int(x == y) for (x, y) in test_results)
+
+    def cost(self, input_as, output_ys):
+        """
+        计算代价
+        :param input_as:
+        :param output_ys:
+        :return:
+        """
+        return self.cost_fun.cost(input_as, output_ys)
+
+    def save(self, filename):
+        """
+        网络参数持久化
+        :param filename:
+        :return:
+        """
+        return
+
+    def load(self, filename):
+        """
+        加载网络参数
+        :param filename:
+        :return:
+        """
+        return
+
+    def clear(self):
+        """
+        清楚当前的梯度数据
+        :return:
+        """
+        for layer in self.layers:
+            layer.clear()
 
 # net = NetworkBasic(layer_sizes=[4, 3, 2], cost_fun=cost_funs.QuadraticCost)
 # net.info()

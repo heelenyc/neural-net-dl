@@ -29,11 +29,17 @@ class Sigmoid(DefaultActFunc):
     @staticmethod
     def active(z):
         """The sigmoid function."""
+        """
         if np.all(z >= 0):  # 对sigmoid函数优化，避免出现极大的数据溢出
             return 1.0 / (1 + np.exp(-z))
         else:
             return np.exp(z) / (1 + np.exp(z))
         # return expit(z)
+        """
+        if np.any(z > 100) or np.any(z < -100):
+            pass
+            # print(z)
+        return 1.0 / (1 + np.exp(-z))
 
     @staticmethod
     def active_derivative(z):

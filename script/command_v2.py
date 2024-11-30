@@ -1,16 +1,29 @@
+import activation_funs
 import cost_funs
 import mnist_loader
 import tools
-import network_basic as nt
+import network_basic_v2 as nt
 
 # trains, validates, tests = mnist_loader.load_data()
 # tools.show_pic(trains[0][0], trains[1][0])
 
 trains, validates, tests = mnist_loader.load_data_wrapper()
-# tools.show_pic(trains[0][0], mnist_loader.re_vectorized_result(trains[0][1]))
 
+"""
+v2 版本， 集中在network里计算
+输出层的激活函数直接输出，效果更好，学习更快更准确
+更大的隐藏层不能带来更明显的效果
+小样本随机梯度可以加快学习
+单次训练迭代的样本太大效果不一定好，可能会拟合更多的非有效特征导致过拟合问题（跟样本拟合很好，代价很小，但是验证精度反而更低）
+"""
 # Epoch 30/30 end, cost 0.041856, took 20.91s, accuracy 9400/10000
-net = nt.NetworkBasic(layer_sizes=[784, 20, 10], cost_fun=cost_funs.QuadraticCost)
+# vs
+# Epoch 30/30 end, cost 0.020091, lr:8.40 took 14.51s, accuracy 9607/10000
+# net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost)
+# Epoch 30/30 end, cost 0.018822, lr:15.00 took 21.57s, accuracy 9656/10000
+net = nt.NetworkBasic(layer_sizes=[784, 100, 10], cost_fun=cost_funs.QuadraticCost,
+                      output_atv_fun=activation_funs.DefaultActFunc)
+net.info()
 net.train_degrade(trains, 3, 30, 100, tests, True)
 
 # Epoch 30/30 end, cost 0.041353, took 22.85s, accuracy 9382/10000
@@ -48,5 +61,3 @@ net.train_degrade(trains, 3, 30, 100, tests, True)
 # 更多的隐藏层，并不能带来更多的准确率
 # net = nt.NetworkBasic(layer_sizes=[784, 100, 20, 10], cost_fun=cost_funs.QuadraticCost)
 # net.train_degrade(trains, 3, 30, 100, tests, True)
-
-# net.info()  # weight 的梯度因为输入极其稀疏的原因，同样也很稀疏

@@ -1,5 +1,7 @@
 import numpy as np
 
+import activation_funs
+
 # x = np.array([[1],[1]])
 # y = np.array([[1],[1],[1]]).T
 # print(x)
@@ -43,10 +45,10 @@ Numpy 实现了运算符重载，使用 @ 可以代替 np.matmul()
 """
 矩阵点乘，就是矩阵各个对应元素相乘，要求矩阵必须维数相等，即MxN维矩阵乘以MxN维矩阵 。
 """
-a = np.array([1, 2])
-b = np.array([3, 4])
-print(np.dot(a, b))  # 11
-print(np.multiply(a, b))  # [3 8]
+# a = np.array([1, 2])
+# b = np.array([3, 4])
+# print(np.dot(a, b))  # 11
+# print(np.multiply(a, b))  # [3 8]
 
 # for i in range(1, 2):
 #     print(i)
@@ -65,3 +67,19 @@ print(np.multiply(a, b))  # [3 8]
 # m = [(a - y) ** 2 / 2 for a, y in zip(a, b)]
 # print(m)
 # print(np.sum(m))  #
+
+# print([1, 2, 3][1:-1])
+
+# print(1/activation_funs.Sigmoid.active(-100))
+# print(1/activation_funs.Sigmoid.active(-100))
+# for i in range(-1, -3,-1):
+#     print(i)
+
+# list = []
+# narray = np.zeros((1,2))
+# list.append(narray)
+# narray[0][0] = 1
+# print(list)
+
+list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+print(list[1:11])

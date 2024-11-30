@@ -66,6 +66,6 @@ class FullConnectionLayer:
         self.degrade_b = np.zeros((self.size, 1))
         self.degrade_w = np.zeros((self.size, self.pre_layer_size))
 
-    def step(self, l_rate):
-        self.biases = self.biases - l_rate * self.degrade_b
-        self.weights = self.weights - l_rate * self.degrade_w
+    def step(self, l_rate, mini_num):
+        self.biases = self.biases - (l_rate/mini_num) * self.degrade_b
+        self.weights = self.weights - (l_rate/mini_num) * self.degrade_w
