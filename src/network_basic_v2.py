@@ -1,6 +1,7 @@
 """
 s型神经元 、反向传播基本实现
 """
+import copy
 import time
 import random
 
@@ -63,7 +64,7 @@ class NetworkBasic:
         # 网络的输出
         return output_z, output_a
 
-    def backward(self, expect_y, o_z, o_a):
+    def backward(self, expect_y, o_z, o_a, mini_w_d_s, mini_b_d_s):
         """
         从输出层往输入层，逐层计算各参数偏导
         :param expect_y:
@@ -72,22 +73,26 @@ class NetworkBasic:
         :return:
         """
 
-        w_degrade_s = []  # shape like self.weights
-        b_degrade_s = []  # shape like self.biases
+        # w_degrade_s = []  # shape like self.weights
+        # b_degrade_s = []  # shape like self.biases
         # 最后一层的直接算；
         factor = self.cost_fun.cost_prime(o_a[-1], expect_y) * self.output_atv_fun.active_derivative(o_z[-1])
-        b_degrade_s.append(factor * 1)
-        w_degrade_s.append(np.matmul(factor, o_a[-2].T))
+        # mini_b_d_s.append(factor * 1)
+        # mini_w_d_s.append(np.matmul(factor, o_a[-2].T))
+        mini_b_d_s[-1] += factor * 1
+        mini_w_d_s[-1] += np.matmul(factor, o_a[-2].T)
 
-        for layer_index in range(-2, self.num_layers * (-1), -1):  # 遍历不包括最后一层和第一层；
+        for layer_index in range(-2, self.num_layers * (-1), -1):  # 遍历不包括最后一层和第一层；# TODO cpu大户
             factor = np.matmul(self.weights[layer_index + 1].T, factor) * self.atv_fun.active_derivative(
                 o_z[layer_index])
-            b_degrade_s.append(factor * 1)
-            w_degrade_s.append(np.matmul(factor, o_a[layer_index - 1].T))
+            # mini_b_d_s.append(factor * 1)
+            # mini_w_d_s.append(np.matmul(factor, o_a[layer_index - 1].T))
+            mini_b_d_s[layer_index] += factor * 1
+            mini_w_d_s[layer_index] += np.matmul(factor, o_a[layer_index - 1].T)
 
-        w_degrade_s.reverse()
-        b_degrade_s.reverse()
-        return w_degrade_s, b_degrade_s
+        # mini_w_d_s.reverse()
+        # mini_b_d_s.reverse()
+        # return w_degrade_s, b_degrade_s
 
     def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None, dynamic_lr=False):
         """
@@ -95,6 +100,7 @@ class NetworkBasic:
         """
         last_checked_ts = time.time()
         epoch_print_threshold = 1
+        train_data_len = len(train_data)
 
         for epoch in range(num_epochs):
             if epoch % epoch_print_threshold == 0:
@@ -104,7 +110,6 @@ class NetworkBasic:
             a_s = []
             epoch_cost = 0.0
             factor_lr = 0.1
-            pre_mini_cost = 0.0
 
             if mini_num > len(train_data):
                 mini_num = len(train_data)
@@ -115,39 +120,45 @@ class NetworkBasic:
                 train_data[k:k + mini_num]
                 for k in range(0, len(train_data), mini_num)]
 
+            pre_delta_cost = 0.0
+            pre_mini_cost = 0.0
+            delta_cost = 0.0
+            zero_mini_b_d_s = [np.zeros(b.shape) for b in self.biases]
+            zero_w_d_s = [np.zeros(w.shape) for w in self.weights]
+
             for mini_train_data in mini_train_batches:
                 mini_cost_s = 0.0
-                mini_b_d_s = [np.zeros(b.shape) for b in self.biases]
-                mini_w_d_s = [np.zeros(w.shape) for w in self.weights]
+                mini_b_d_s = [np.zeros(b.shape) for b in self.biases]#copy.deepcopy(zero_mini_b_d_s)
+                mini_w_d_s = [np.zeros(w.shape) for w in self.weights] #copy.deepcopy(zero_w_d_s)
+
                 for x, y in mini_train_data:
                     # 这里输入和输出拆成了单个一对一对的
                     o_z, o_a = self.forward(x)
                     a_s.append(o_a[-1])  # 记录网络最终的输出，用于计算评估代价
                     cur_cost = self.cost(o_a[-1], y)
-                    epoch_cost += cur_cost / len(train_data)  # 每个输入输出对应一个代价值
+                    epoch_cost += cur_cost / train_data_len  # 每个输入输出对应一个代价值
                     mini_cost_s += cur_cost / mini_num  # 计算代价很耗时，每个样本都要计算一次
                     # 对应每次输出，计算当前x输入下的各参数偏导  backward 反向传播
-                    w_d_s, b_d_s = self.backward(y, o_z, o_a)
-                    mini_w_d_s = [mini_w_d + w_d for mini_w_d, w_d in zip(mini_w_d_s, w_d_s)]
-                    mini_b_d_s = [mini_b_d + b_d for mini_b_d, b_d in zip(mini_b_d_s, b_d_s)]
+                    self.backward(y, o_z, o_a, mini_w_d_s, mini_b_d_s)
+                    # mini_w_d_s = [mini_w_d + w_d for mini_w_d, w_d in zip(mini_w_d_s, w_d_s)]
+                    # mini_b_d_s = [mini_b_d + b_d for mini_b_d, b_d in zip(mini_b_d_s, b_d_s)]
 
                 # 动态调整学习率
-                if dynamic_lr:
-                    cur_mini_cost = mini_cost_s  # 计算代价很耗时
-                    if pre_mini_cost > 0.0:
-                        delta_cost = cur_mini_cost - pre_mini_cost
-                        r = delta_cost / pre_mini_cost
-                        if r < 0:  # 代价在下降并且下降的比较慢，想维持一定的速度
-                            learning_rate += factor_lr
-                        if r > 0 and learning_rate > factor_lr * 10:  # 代价回升，往回学习
-                            learning_rate -= factor_lr
+                if dynamic_lr and pre_mini_cost > 0.0:
+                    """在连续的小样本批次之间调整学习率，第一次和第二次信息不足，除外"""
+                    delta_cost = mini_cost_s - pre_mini_cost
+                    if 0 > delta_cost > pre_delta_cost:  # 代价在下降 比上一次降的慢 加速
+                        learning_rate += factor_lr
+                    if delta_cost > pre_delta_cost > 0 and learning_rate > 10 * factor_lr:  # 代价回升，并且比上一次回升的更厉害
+                        learning_rate -= factor_lr  # 需要缩短距离更精确的去寻找极值点
 
-                    pre_mini_cost = cur_mini_cost
+                pre_mini_cost = mini_cost_s
+                pre_delta_cost = delta_cost
 
                 # 使用偏导，结合学习率，修正参数；
                 self.step(learning_rate, mini_w_d_s, mini_b_d_s, mini_num)
-            # 一次epoch完成
 
+            # 打印本次epoch信息
             if epoch % epoch_print_threshold == 0:
                 if test_data:
                     print(
@@ -160,6 +171,8 @@ class NetworkBasic:
                     print("Epoch {}/{} end, cost {:.6f} lr:{:.2f} mini_num:{} "
                           "took {:.2f}s".format(epoch + 1, num_epochs, epoch_cost, learning_rate,
                                                 mini_num, time.time() - last_checked_ts))
+
+            # 一次epoch完成
 
         print("Train end!")
 
