@@ -1,14 +1,13 @@
 """
 s型神经元 、反向传播基本实现
 """
-import copy
-import time
 import random
+import time
 
 import numpy as np
+
 import activation_funs
 import cost_funs
-import full_con_layer
 
 
 class NetworkBasic:
@@ -69,30 +68,22 @@ class NetworkBasic:
         从输出层往输入层，逐层计算各参数偏导
         :param expect_y:
         :param o_z:
-        :param o_a: 第一个元素是输入x
+        :param o_a: 第一个元素是网络的输入x
+        :param mini_w_d_s: 生成的梯度直接迭代进去，采用这种方式为了点性能
+        :param mini_b_d_s: 生成的梯度直接迭代进去，采用这种方式为了点性能
         :return:
         """
 
-        # w_degrade_s = []  # shape like self.weights
-        # b_degrade_s = []  # shape like self.biases
         # 最后一层的直接算；
         factor = self.cost_fun.cost_prime(o_a[-1], expect_y) * self.output_atv_fun.active_derivative(o_z[-1])
-        # mini_b_d_s.append(factor * 1)
-        # mini_w_d_s.append(np.matmul(factor, o_a[-2].T))
         mini_b_d_s[-1] += factor * 1
         mini_w_d_s[-1] += np.matmul(factor, o_a[-2].T)
 
         for layer_index in range(-2, self.num_layers * (-1), -1):  # 遍历不包括最后一层和第一层；# TODO cpu大户
             factor = np.matmul(self.weights[layer_index + 1].T, factor) * self.atv_fun.active_derivative(
                 o_z[layer_index])
-            # mini_b_d_s.append(factor * 1)
-            # mini_w_d_s.append(np.matmul(factor, o_a[layer_index - 1].T))
             mini_b_d_s[layer_index] += factor * 1
             mini_w_d_s[layer_index] += np.matmul(factor, o_a[layer_index - 1].T)
-
-        # mini_w_d_s.reverse()
-        # mini_b_d_s.reverse()
-        # return w_degrade_s, b_degrade_s
 
     def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None, dynamic_lr=False):
         """
@@ -123,13 +114,11 @@ class NetworkBasic:
             pre_delta_cost = 0.0
             pre_mini_cost = 0.0
             delta_cost = 0.0
-            zero_mini_b_d_s = [np.zeros(b.shape) for b in self.biases]
-            zero_w_d_s = [np.zeros(w.shape) for w in self.weights]
 
             for mini_train_data in mini_train_batches:
                 mini_cost_s = 0.0
-                mini_b_d_s = [np.zeros(b.shape) for b in self.biases]#copy.deepcopy(zero_mini_b_d_s)
-                mini_w_d_s = [np.zeros(w.shape) for w in self.weights] #copy.deepcopy(zero_w_d_s)
+                mini_b_d_s = [np.zeros(b.shape) for b in self.biases]  # copy.deepcopy(zero_mini_b_d_s)
+                mini_w_d_s = [np.zeros(w.shape) for w in self.weights]  # copy.deepcopy(zero_w_d_s)
 
                 for x, y in mini_train_data:
                     # 这里输入和输出拆成了单个一对一对的
@@ -140,8 +129,6 @@ class NetworkBasic:
                     mini_cost_s += cur_cost / mini_num  # 计算代价很耗时，每个样本都要计算一次
                     # 对应每次输出，计算当前x输入下的各参数偏导  backward 反向传播
                     self.backward(y, o_z, o_a, mini_w_d_s, mini_b_d_s)
-                    # mini_w_d_s = [mini_w_d + w_d for mini_w_d, w_d in zip(mini_w_d_s, w_d_s)]
-                    # mini_b_d_s = [mini_b_d + b_d for mini_b_d, b_d in zip(mini_b_d_s, b_d_s)]
 
                 # 动态调整学习率
                 if dynamic_lr and pre_mini_cost > 0.0:

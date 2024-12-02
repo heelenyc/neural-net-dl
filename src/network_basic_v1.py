@@ -1,12 +1,12 @@
 """
 s型神经元 、反向传播基本实现
 """
-import time
 import random
+import time
 
 import numpy as np
+
 import activation_funs
-import cost_funs
 import full_con_layer
 
 
@@ -34,7 +34,7 @@ class NetworkBasic:
                 full_con_layer.FullConnectionLayer(layer_sizes[i - 1], layer_sizes[i], activation_funs.Sigmoid))
         # 最后一层单独考虑，暂时不使用激活函数
         self.layers.append(
-            full_con_layer.FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.DefaultActFunc, True))
+            full_con_layer.FullConnectionLayer(layer_sizes[-2], layer_sizes[-1], activation_funs.Sigmoid, True))
 
     def forward(self, input_x, update_self=False):
         """
@@ -55,16 +55,13 @@ class NetworkBasic:
         # 网络的输出
         return output_z, output_a
 
-    def backward(self, input_x, expect_y, o_z, o_a, mini_num):
+    def backward(self, expect_y):
         """
         从输出层往输入层，逐层计算各参数偏导
-        :param mini_num: 小样本数量
         :param expect_y:
-        :param input_x:
-        :param o_z:
-        :param o_a:
         :return:
         """
+        next_layer = self.layers[-1]
         for layer in reversed(self.layers):
             if layer.is_output:  # 首先执行的
                 layer.factor = self.cost_fun.cost_prime(layer.output_a,
@@ -134,7 +131,7 @@ class NetworkBasic:
                     cast_s.append(cur_cost)  # 每个输入输出对应一个代价值
                     mini_cost_s.append(cur_cost)
                     # 对应每次输出，计算当前x输入下的各参数偏导  backward 反向传播
-                    self.backward(x, y, o_z, o_a, mini_num)
+                    self.backward(y)
 
                 # 动态调整学习率
                 if dynamic_lr:

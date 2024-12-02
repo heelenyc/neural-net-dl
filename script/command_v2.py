@@ -30,7 +30,7 @@ exp(z) 容易溢出，没有特别好的解决办法；更换激活函数；
 net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost,
                       output_atv_fun=activation_funs.Sigmoid)
 net.info()
-net.train_degrade(trains, 3, 30, 20, tests, True)
+net.train_degrade(trains, 3, 30, 20, tests, False)
 
 # Epoch 30/30 end, cost 0.041353, took 22.85s, accuracy 9382/10000
 # Epoch 28/30 end, cost 0.083697, took 23.80s, accuracy 8572/10000
