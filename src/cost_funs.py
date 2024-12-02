@@ -51,9 +51,30 @@ class QuadraticCost(DefaultCost):
         :return:
         """
         # return np.sum([(a - y) ** 2 / 2 for a, y in zip(x_s, y_s)])
-        v = (x_s - y_s).reshape(-1)
-        # return v.dot(v)/2  # 效率更高
+        v = (x_s - y_s).reshape(-1)  # 降维
         return np.dot(v, v) / 2  # 效率更高
+
+
+class CrossEntropyCost(DefaultCost):
+    """二次代价函数, 向量v的模"""
+    fun_name = 'quadratic_cost'
+
+    @staticmethod
+    def cost_prime(x_s, y_s):
+        return (x_s - y_s) / x_s * (1 - x_s)
+
+    @staticmethod
+    def cost(x_s, y_s):
+        """
+        计算单次输出与预期的交叉熵代价
+        :param x_s:  N * 1 的矩阵
+        :param y_s:  N * 1 的矩阵
+        :return:
+        """
+        v = (y_s * np.log(x_s) + (1 - y_s) * np.log(1 - x_s)) * (-1)
+        v = v.reshape(-1)
+        return np.sum(v)
+
 
 # print(DefaultActFunc.info())
 # print(MeanSquaredErrorCost.cost(np.array([[1, 2], [1, 2]]), np.array([[3, 4], [3, 4]])))
@@ -77,3 +98,5 @@ class QuadraticCost(DefaultCost):
 #
 # for a, y in zip([[1, 2, 3], [1, 2, 3]], [[2], [2]]):
 #     print("a: {}, y: {}".format(a, y))
+# print(CrossEntropyCost.cost(np.array([[0.3, 0.4, 0.5]]), np.array([[0.4, 0.5, 0.6]])))
+# print(CrossEntropyCost.cost(np.array([[0.4, 0.5, 0.6]]), np.array([[0.4, 0.5, 0.6]])))

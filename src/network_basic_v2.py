@@ -75,7 +75,10 @@ class NetworkBasic:
         """
 
         # 最后一层的直接算；
-        factor = self.cost_fun.cost_prime(o_a[-1], expect_y) * self.output_atv_fun.active_derivative(o_z[-1])
+        if self.cost_fun == cost_funs.CrossEntropyCost:
+            factor = o_a[-1] - expect_y  # 交叉熵
+        else:
+            factor = self.cost_fun.cost_prime(o_a[-1], expect_y) * self.output_atv_fun.active_derivative(o_z[-1])
         mini_b_d_s[-1] += factor * 1
         mini_w_d_s[-1] += np.matmul(factor, o_a[-2].T)
 

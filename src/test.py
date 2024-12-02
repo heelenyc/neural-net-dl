@@ -1,6 +1,7 @@
 import numpy as np
 
 import activation_funs
+import cost_funs
 
 # x = np.array([[1],[1]])
 # y = np.array([[1],[1],[1]]).T
@@ -81,5 +82,10 @@ Numpy 实现了运算符重载，使用 @ 可以代替 np.matmul()
 # narray[0][0] = 1
 # print(list)
 
-list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-print(list[1:11])
+# list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+# print(list[1:11])
+
+# n = cost_funs.CrossEntropyCost
+# print(n == cost_funs.CrossEntropyCost)
+# print(n == cost_funs.DefaultCost)
+# print(n == cost_funs.MeanSquaredErrorCost)
