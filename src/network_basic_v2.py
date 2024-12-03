@@ -25,7 +25,7 @@ class NetworkBasic:
         print("out_activation_fun:{}".format(self.output_atv_fun))
 
     def __init__(self, layer_sizes, cost_fun=cost_funs.QuadraticCost, atv_fun=activation_funs.Sigmoid,
-                 output_atv_fun=activation_funs.Sigmoid):
+                 output_atv_fun=activation_funs.Sigmoid, std_w=False, std_b=False, lbd=None):
         """
         :param layer_sizes: [num_input,num_hidden,,,num_output]
         """
@@ -33,11 +33,20 @@ class NetworkBasic:
         s = time.time()
         self.num_layers = len(layer_sizes)  # 网络的层数，包括输入和输出
         self.sizes = layer_sizes  # 网络的结构   [784, 30, 10]
-        self.biases = [np.random.randn(size, 1) for size in layer_sizes[1:]]
-        self.weights = [np.random.randn(size, pre_size) for pre_size, size in zip(layer_sizes[:-1], layer_sizes[1:])]
+        if std_w:
+            self.weights = [np.random.uniform(-1, 1, (size, pre_size)) for pre_size, size in
+                            zip(layer_sizes[:-1], layer_sizes[1:])]
+        else:
+            self.weights = [np.random.randn(size, pre_size) for pre_size, size in
+                            zip(layer_sizes[:-1], layer_sizes[1:])]
+        if std_b:
+            self.biases = [np.random.uniform(-1, 1, (size, 1)) for size in layer_sizes[1:]]
+        else:
+            self.biases = [np.random.randn(size, 1) for size in layer_sizes[1:]]
         self.cost_fun = cost_fun
         self.atv_fun = atv_fun
         self.output_atv_fun = output_atv_fun
+        self.lbd = lbd
         print("Init time:{}".format(time.time() - s))
 
     def forward(self, input_x):
@@ -146,7 +155,7 @@ class NetworkBasic:
                 pre_delta_cost = delta_cost
 
                 # 使用偏导，结合学习率，修正参数；
-                self.step(learning_rate, mini_w_d_s, mini_b_d_s, mini_num)
+                self.step(learning_rate, mini_w_d_s, mini_b_d_s, mini_num, train_data_len)
 
             # 打印本次epoch信息
             if epoch % epoch_print_threshold == 0:
@@ -166,13 +175,17 @@ class NetworkBasic:
 
         print("Train end!")
 
-    def step(self, l_rate, w_d_s, b_d_s, mini_num):
+    def step(self, l_rate, w_d_s, b_d_s, mini_num, train_data_size):
         """
         使用计算出来的偏导优化参数
         :return:
         """
         self.biases = [b - (l_rate / mini_num) * b_d for b, b_d in zip(self.biases, b_d_s)]
-        self.weights = [w - (l_rate / mini_num) * w_d for w, w_d in zip(self.weights, w_d_s)]
+        if self.lbd:  # 权重衰减的参数跟样本的规模成反比
+            self.weights = [w * (1 - l_rate * self.lbd / train_data_size) - (l_rate / mini_num) * w_d for w, w_d in
+                            zip(self.weights, w_d_s)]
+        else:
+            self.weights = [w - (l_rate / mini_num) * w_d for w, w_d in zip(self.weights, w_d_s)]
 
     def cost(self, input_as, output_ys):
         """

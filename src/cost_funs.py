@@ -4,12 +4,12 @@ import numpy as np
 class DefaultCost:
     fun_name = 'default_cost'
 
-    @staticmethod
-    def cost(x_s, y_s):
+    @classmethod
+    def cost(cls, x_s, y_s):
         return np.abs(y_s - x_s)
 
-    @staticmethod
-    def cost_prime(x_s, y_s):
+    @classmethod
+    def cost_prime(cls, x_s, y_s):
         return 1 if x_s > y_s else -1
 
     @classmethod
@@ -25,12 +25,12 @@ class MeanSquaredErrorCost(DefaultCost):
     """均方误差 代价函数"""
     fun_name = 'mean_squared_error'
 
-    @staticmethod
-    def cost_prime(x_s, y_s):
+    @classmethod
+    def cost_prime(cls, x_s, y_s):
         return y_s - x_s
 
-    @staticmethod
-    def cost(x_s, y_s):
+    @classmethod
+    def cost(cls, x_s, y_s):
         return np.mean((y_s - x_s) ** 2)
 
 
@@ -38,12 +38,12 @@ class QuadraticCost(DefaultCost):
     """二次代价函数, 向量v的模"""
     fun_name = 'quadratic_cost'
 
-    @staticmethod
-    def cost_prime(x_s, y_s):
+    @classmethod
+    def cost_prime(cls, x_s, y_s):
         return x_s - y_s
 
-    @staticmethod
-    def cost(x_s, y_s):
+    @classmethod
+    def cost(cls, x_s, y_s):
         """
         计算单次输出与预期的二次代价值
         :param x_s:  N * 1 的矩阵
@@ -58,23 +58,24 @@ class QuadraticCost(DefaultCost):
 class CrossEntropyCost(DefaultCost):
     """二次代价函数, 向量v的模"""
     fun_name = 'quadratic_cost'
+    precision = np.exp(-500)
 
-    @staticmethod
-    def cost_prime(x_s, y_s):
+    @classmethod
+    def cost_prime(cls, x_s, y_s):
         return (x_s - y_s) / x_s * (1 - x_s)
 
-    @staticmethod
-    def cost(x_s, y_s):
+    @classmethod
+    def cost(cls, x_s, y_s):
         """
         计算单次输出与预期的交叉熵代价
         :param x_s:  N * 1 的矩阵
         :param y_s:  N * 1 的矩阵
         :return:
         """
-        v = (y_s * np.log(x_s) + (1 - y_s) * np.log(1 - x_s)) * (-1)
+        # 当x_s为0或者1的时候，RuntimeWarning: divide by zero encountered in log
+        v = (y_s * np.log(x_s + cls.precision) + (1 - y_s) * np.log(1 - x_s + cls.precision)) * (-1)
         v = v.reshape(-1)
         return np.sum(v)
-
 
 # print(DefaultActFunc.info())
 # print(MeanSquaredErrorCost.cost(np.array([[1, 2], [1, 2]]), np.array([[3, 4], [3, 4]])))
@@ -98,5 +99,10 @@ class CrossEntropyCost(DefaultCost):
 #
 # for a, y in zip([[1, 2, 3], [1, 2, 3]], [[2], [2]]):
 #     print("a: {}, y: {}".format(a, y))
-# print(CrossEntropyCost.cost(np.array([[0.3, 0.4, 0.5]]), np.array([[0.4, 0.5, 0.6]])))
-# print(CrossEntropyCost.cost(np.array([[0.4, 0.5, 0.6]]), np.array([[0.4, 0.5, 0.6]])))
+
+# xs = np.array([[0.99999999999999999], [0.8], [0.4]])  # [[0.], [0.], [1.], [0.], [0.], [0.], [0.], [0.], [0.], [0.]]
+# ys = np.array([[0], [1], [0]])
+# print(CrossEntropyCost.cost(xs, ys))
+
+# print(np.exp(-1000)) # 0.0
+# print(np.log(np.exp(-1000)))  # -inf RuntimeWarning: divide by zero encountered in log
