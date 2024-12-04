@@ -33,13 +33,13 @@ class NetworkBasic:
         s = time.time()
         self.num_layers = len(layer_sizes)  # 网络的层数，包括输入和输出
         self.sizes = layer_sizes  # 网络的结构   [784, 30, 10]
-        if std_w:
-            self.weights = [np.random.uniform(-1, 1, (size, pre_size)) for pre_size, size in
+        if std_w:  # 使用跟输入规模有关的正太分布
+            self.weights = [np.random.normal(0, 1/np.sqrt(pre_size), (size, pre_size)) for pre_size, size in
                             zip(layer_sizes[:-1], layer_sizes[1:])]
         else:
             self.weights = [np.random.randn(size, pre_size) for pre_size, size in
                             zip(layer_sizes[:-1], layer_sizes[1:])]
-        if std_b:
+        if std_b:  # 直观上理解，偏置的初始化根据输出的需要来确定
             self.biases = [np.random.uniform(-1, 1, (size, 1)) for size in layer_sizes[1:]]
         else:
             self.biases = [np.random.randn(size, 1) for size in layer_sizes[1:]]
