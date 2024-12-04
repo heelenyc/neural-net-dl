@@ -71,16 +71,16 @@ trains, validates, tests = mnist_loader.load_data_wrapper()
 # net.info()
 
 """L2规范化，权重衰减，好像没啥明显效果"""
-# Epoch 30/30 end, cost 0.221490, lr:0.50 mini_num:10 took 11.89s, accuracy 9657/10000
+# Epoch 54/60 end, cost 0.133630, lr:0.50 mini_num:10 took 18.84s, accuracy 9782/10000
 # net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.CrossEntropyCost,
 #                       output_atv_fun=activation_funs.Sigmoid, std_w=True, lbd=5)
 # net.info()
 # net.train_degrade(trains, 0.5, 30, 10, tests)
 # net.info()
 
-# Epoch 54/60 end, cost 0.133630, lr:0.50 mini_num:10 took 18.84s, accuracy 9782/10000
-# net = nt.NetworkBasic(layer_sizes=[784, 100, 10], cost_fun=cost_funs.CrossEntropyCost,
-#                       output_atv_fun=activation_funs.Sigmoid, std_w=True, lbd=5)
-# net.info()
-# net.train_degrade(trains, 0.5, 60, 10, tests)
-# net.info()
+#
+net = nt.NetworkBasic(layer_sizes=[784, 100, 30, 10], cost_fun=cost_funs.CrossEntropyCost,
+                      output_atv_fun=activation_funs.Sigmoid, std_w=True, lbd=5)
+net.info()
+net.train_degrade(trains, 0.5, 60, 10, tests)
+net.info()
