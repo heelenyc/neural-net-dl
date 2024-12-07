@@ -11,7 +11,7 @@ def load_data():
     经过改造之后 50000 训练 + 10000 验证 + 10000 测试
     每个都是两个数组，第一个数据是784元素的数组numpy 的一维array，对应每个图里784个元素，第二个是对应的数字 int64
     """
-    f = gzip.open('../data/mnist.pkl.gz', 'rb')
+    f = gzip.open('../../data/mnist.pkl.gz', 'rb')
     training_data, validation_data, test_data = pickle.load(f, encoding='latin1')
     f.close()
     return training_data, validation_data, test_data

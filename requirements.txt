@@ -1,0 +1,8 @@
+# Numpy has introduced a change that breaks compability with theano, therefor we're not gonna use newer versions
+numpy < 1.22
+
+# numpy~=1.24.4
+matplotlib~=3.7.5
+scipy~=1.10.1
+pyopencl~=2024.3
+Theano~=1.0.5

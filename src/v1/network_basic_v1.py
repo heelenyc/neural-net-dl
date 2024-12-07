@@ -7,7 +7,7 @@ import time
 import numpy as np
 
 import activation_funs
-import full_con_layer
+import v1.full_con_layer as full_con_layer
 
 
 class NetworkBasic:

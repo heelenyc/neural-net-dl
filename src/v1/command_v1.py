@@ -1,23 +1,16 @@
-import activation_funs
 import cost_funs
 import mnist_loader
-import tools
-import network_basic_v2 as nt
+import network_basic_v1 as nt
 
 # trains, validates, tests = mnist_loader.load_data()
 # tools.show_pic(trains[0][0], trains[1][0])
 
 trains, validates, tests = mnist_loader.load_data_wrapper()
+# tools.show_pic(trains[0][0], mnist_loader.re_vectorized_result(trains[0][1]))
 
 # Epoch 30/30 end, cost 0.041856, took 20.91s, accuracy 9400/10000
-# vs
-# Epoch 30/30 end, cost 0.020091, lr:8.40 took 14.51s, accuracy 9607/10000
-# net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost)
-# Epoch 30/30 end, cost 0.018822, lr:15.00 took 21.57s, accuracy 9656/10000
-# net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost,
-#                       output_atv_fun=activation_funs.Sigmoid)
-# net.info()
-# net.train_degrade(trains, 3, 30, 20, tests, True)
+net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.QuadraticCost)
+net.train_degrade(trains, 3, 30, 20, tests, False)
 
 # Epoch 30/30 end, cost 0.041353, took 22.85s, accuracy 9382/10000
 # Epoch 28/30 end, cost 0.083697, took 23.80s, accuracy 8572/10000
@@ -55,32 +48,4 @@ trains, validates, tests = mnist_loader.load_data_wrapper()
 # net = nt.NetworkBasic(layer_sizes=[784, 100, 20, 10], cost_fun=cost_funs.QuadraticCost)
 # net.train_degrade(trains, 3, 30, 100, tests, True)
 
-"""交叉熵代价函数"""
-# Epoch 35/50 end, cost 0.008742, lr:0.50 mini_num:10 took 17.73s, accuracy 9682/10000
-# net = nt.NetworkBasic(layer_sizes=[784, 100, 10], cost_fun=cost_funs.CrossEntropyCost,
-#                       output_atv_fun=activation_funs.Sigmoid)
-# net.info()
-# net.train_degrade(trains, 0.5, 50, 10, tests)
-
-"""标准化，效果很明显"""
-# Epoch 32/50 end, cost 0.006109, lr:0.50 mini_num:10 took 19.04s, accuracy 9773/10000
-# net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.CrossEntropyCost,
-#                       output_atv_fun=activation_funs.Sigmoid, std_w=True)
-# net.info()
-# net.train_degrade(trains, 0.5, 30, 10, tests)
-# net.info()
-
-"""L2规范化，权重衰减，好像没啥明显效果"""
-# Epoch 54/60 end, cost 0.133630, lr:0.50 mini_num:10 took 18.84s, accuracy 9782/10000
-# net = nt.NetworkBasic(layer_sizes=[784, 40, 10], cost_fun=cost_funs.CrossEntropyCost,
-#                       output_atv_fun=activation_funs.Sigmoid, std_w=True, lbd=5)
-# net.info()
-# net.train_degrade(trains, 0.5, 30, 10, tests)
-# net.info()
-
-#
-net = nt.NetworkBasic(layer_sizes=[784, 100, 30, 10], cost_fun=cost_funs.CrossEntropyCost,
-                      output_atv_fun=activation_funs.Sigmoid, std_w=True, lbd=5)
-net.info()
-net.train_degrade(trains, 0.5, 60, 10, tests)
-net.info()
+# net.info()  # weight 的梯度因为输入极其稀疏的原因，同样也很稀疏
