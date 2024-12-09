@@ -1,5 +1,6 @@
 import pickle
 import gzip
+import time
 
 import numpy as np
 import theano
@@ -13,7 +14,7 @@ from theano.tensor import tanh
 
 import logger_factory as lf
 
-logger = lf.logger_factory.create_logger('network_cnn', log_format='%(asctime)s %(message)s')
+logger = lf.logger_factory.create_logger('network_cnn', log_format='%(message)s')
 
 
 # Activation functions for neurons
@@ -24,8 +25,9 @@ def ReLU(z): return tt.maximum(0.0, z)
 
 
 # Constants
-logger.info("Theano use device : {}.  If this is not desired, then modify the env config in configuration.py".format(
-    theano.config.device))
+logger.info(
+    "Theano use device : {}, floatX: {}.  If not desired, then modify the env config in configuration.py".format(
+        theano.config.device, theano.config.floatX))
 
 
 # Load the MNIST data
@@ -60,14 +62,17 @@ class NetworkCnn:
         self.x = tt.matrix("x")
         self.y = tt.ivector("y")
 
+        # 第一个隐藏层或者卷积层设置输入
         init_layer = self.layers[0]
         init_layer.set_inpt(self.x, self.x, self.mini_batch_size)
 
+        # 前一层的输出作为后一层的输入，层级结构串联成网络
         for j in range(1, len(self.layers)):
             prev_layer, layer = self.layers[j - 1], self.layers[j]
             layer.set_inpt(
-                prev_layer.output, prev_layer.output_dropout, self.mini_batch_size)
+                prev_layer.output, prev_layer.output_dropout, self.mini_batch_size) # TODO：前一层有两个输出，一个是直接输出，一个是有部分弃权的输出
 
+        # 网络的输出定义为最后一层的输出
         self.output = self.layers[-1].output
         self.output_dropout = self.layers[-1].output_dropout
 
@@ -120,7 +125,7 @@ class NetworkCnn:
                 self.y:
                     test_y[i * self.mini_batch_size: (i + 1) * self.mini_batch_size]
             })
-        # TODO:
+        #
         test_mb_predictions = theano.function(
             [i], self.layers[-1].y_out,
             givens={
@@ -131,24 +136,27 @@ class NetworkCnn:
         best_validation_accuracy = 0.0
         best_iteration = -1
         for epoch in range(epochs):
+            epoch_checked_ts_start = time.time()
             for minibatch_index in range(num_training_batches):
                 iteration = num_training_batches * epoch + minibatch_index  # 这个迭代对应的是一个mini样本
 
                 cost_ij = train_mb(minibatch_index)
                 if iteration % 1000 == 0:
                     logger.info(
-                        "Training mini-batch number {}/{}*{}  cost:{:.6f}".format(iteration, num_training_batches,
-                                                                                  epoch + 1, cost_ij))
+                        "Mini-batch index: {}/{}*{}  cost:{:.6f}".format(iteration, num_training_batches,
+                                                                         epoch + 1, cost_ij))
                 if (iteration + 1) % num_training_batches == 0:
-                    # 每个minibatch里的开始时，对应验证集上的精度
+                    # 每个epoch的最后一个mini_batch完成之后，对应验证集上的精度
                     validation_accuracy = np.mean(
                         [validate_mb_accuracy(j) for j in range(num_validation_batches)])
 
-                    logger.info("Epoch {0}: validation accuracy {1:.2%}".format(epoch, validation_accuracy))
+                    logger.info(
+                        "Epoch {0}: validation accuracy {1:.2%}, take {2:.4f}s".format(epoch + 1, validation_accuracy,
+                                                                                       time.time() - epoch_checked_ts_start))
 
                     if validation_accuracy >= best_validation_accuracy:
                         # 历史最好验证集精度
-                        logger.info("This is the best validation accuracy to date.")
+                        logger.info("Best validation accuracy to date.")
                         best_validation_accuracy = validation_accuracy
                         best_iteration = iteration
                         if test_data:
@@ -164,7 +172,6 @@ class NetworkCnn:
 class ConvPoolLayer:
 
     def __init__(self, filter_shape, image_shape, pool_size=(2, 2), activation_fn=sigmoid):
-
         self.output_dropout = None
         self.output = None
         self.inpt = None
@@ -197,6 +204,12 @@ class ConvPoolLayer:
 class FullyConnectedLayer:
 
     def __init__(self, n_in, n_out, activation_fn=sigmoid, p_dropout=0.0):
+        """
+        :param n_in: number of input  输入的规模
+        :param n_out: number of output
+        :param activation_fn: activation function
+        :param p_dropout: probability of dropout  弃权参数
+        """
         self.output_dropout = None
         self.inpt_dropout = None
         self.y_out = None
@@ -207,7 +220,8 @@ class FullyConnectedLayer:
         self.n_out = n_out
         self.activation_fn = activation_fn
         self.p_dropout = p_dropout
-        # Initialize weights and biases
+        # 初始化权重w时，使用跟规模反比关系收缩的正太随机分布，并放在theano共享变量里
+        # borrow = true 指示：原始参数的改变，共享变量一起改变；
         self.w = theano.shared(
             np.asarray(
                 np.random.normal(loc=0.0, scale=np.sqrt(1.0 / n_out), size=(n_in, n_out)), dtype=theano.config.floatX),
@@ -218,10 +232,15 @@ class FullyConnectedLayer:
         self.params = [self.w, self.b]
 
     def set_inpt(self, inpt, inpt_dropout, mini_batch_size):
+        # 将该层的输入设置成包含整个批量输入的矩阵
         self.inpt = inpt.reshape((mini_batch_size, self.n_in))
+        # 激活函数计算输出，同时处理弃权
         self.output = self.activation_fn((1 - self.p_dropout) * tt.dot(self.inpt, self.w) + self.b)
+        # 找到输出中的最大值下标。结果大小是（mini_batch_size * output[100]），axis=1为横向，axis=0为纵向，所以是在每个横向的结果里找一个最大的
         self.y_out = tt.argmax(self.output, axis=1)
+        # 弃权之后的输入
         self.inpt_dropout = dropout_layer(inpt_dropout.reshape((mini_batch_size, self.n_in)), self.p_dropout)
+        # 弃权之后的输出
         self.output_dropout = self.activation_fn(tt.dot(self.inpt_dropout, self.w) + self.b)
 
     def accuracy(self, y):
@@ -273,6 +292,9 @@ def size(data):
 
 
 def dropout_layer(layer, p_dropout):
+    # 定义一个随机数生成对象，参数是指定的随机种子 [0,999999)
     srng = shared_randomstreams.RandomStreams(np.random.RandomState(0).randint(999999))
+    # 二项分布的随机数  n（试验次数）和p（每次试验成功的概率）
+    # 生成一个跟layer一样的掩码矩阵，随机去掉layer里的一些值
     mask = srng.binomial(n=1, p=1 - p_dropout, size=layer.shape)
     return layer * tt.cast(mask, theano.config.floatX)

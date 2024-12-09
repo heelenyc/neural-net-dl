@@ -1,7 +1,9 @@
 """
 s型神经元 、反向传播基本实现
 """
+import json
 import random
+import sys
 import time
 
 import numpy as np
@@ -89,13 +91,13 @@ class NetworkBasic:
         else:
             factor = self.cost_fun.cost_prime(o_a[-1], expect_y) * self.output_atv_fun.active_derivative(o_z[-1])
         mini_b_d_s[-1] += factor * 1
-        mini_w_d_s[-1] += np.matmul(factor, o_a[-2].T)
+        mini_w_d_s[-1] += np.matmul(factor, o_a[-2].tt)
 
         for layer_index in range(-2, self.num_layers * (-1), -1):  # 遍历不包括最后一层和第一层；# TODO cpu大户
             factor = np.matmul(self.weights[layer_index + 1].T, factor) * self.atv_fun.active_derivative(
                 o_z[layer_index])
             mini_b_d_s[layer_index] += factor * 1
-            mini_w_d_s[layer_index] += np.matmul(factor, o_a[layer_index - 1].T)
+            mini_w_d_s[layer_index] += np.matmul(factor, o_a[layer_index - 1].tt)
 
     def train_degrade(self, train_data, learning_rate, num_epochs, mini_num, test_data=None, dynamic_lr=False):
         """
@@ -201,16 +203,32 @@ class NetworkBasic:
         网络参数持久化
         :param filename:
         :return:
-        """
-        return
 
-    def load(self, filename):
+        data = {"sizes": self.sizes,
+                "weights": [w.tolist() for w in self.weights], "biases": [b.tolist() for b in self.biases],
+                "cost": str(self.cost.__name__)}
+
+        f = open(filename, "w")
+        json.dump(data, f)
+        f.close()
+        """
+
+    @staticmethod
+    def load(filename):
         """
         加载网络参数
         :param filename:
         :return:
+
+        f = open(filename, "r")
+        data = json.load(f)
+        f.close()
+        cost = getattr(sys.modules[__name__], data["cost"])
+        net = NetworkBasic(data["sizes"], cost=cost)
+        net.weights = [np.array(w) for w in data["weights"]]
+        net.biases = [np.array(b) for b in data["biases"]]
+        return net
         """
-        return
 
     def evaluate(self, test_data):
         """

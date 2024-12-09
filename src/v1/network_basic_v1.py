@@ -68,13 +68,13 @@ class NetworkBasic:
                                                         expect_y) * layer.activation_fun.active_derivative(
                     layer.output_z)
                 layer.degrade_b += layer.factor
-                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T)
+                layer.degrade_w += np.matmul(layer.factor, layer.input_x.tt)
             else:
-                layer.factor = np.matmul(next_layer.weights.T,
+                layer.factor = np.matmul(next_layer.weights.tt,
                                          next_layer.factor) * layer.activation_fun.active_derivative(
                     layer.output_z)
                 layer.degrade_b += layer.factor
-                layer.degrade_w += np.matmul(layer.factor, layer.input_x.T)
+                layer.degrade_w += np.matmul(layer.factor, layer.input_x.tt)
 
             next_layer = layer  # 传到下一次计算
 

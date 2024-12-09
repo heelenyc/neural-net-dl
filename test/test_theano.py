@@ -2,7 +2,11 @@ import numpy
 import numpy as np
 import theano
 import theano.tensor as tt
+from matplotlib import pyplot as plt
 from theano import function, pp
+from theano.tensor import shared_randomstreams
+
+import seaborn as sns
 
 """
 # 定义零维数组（即标量）
@@ -134,17 +138,43 @@ f = function([x, y], z)
 # x_as_int = tt.cast(x_shared, 'int32')
 # print(x_as_int)
 
-x = tt.dscalar('x')
-y = x ** 2
-gygx = tt.grad(y, x)
-pp(gygx)
-grad = theano.function([x], gygx)
+# x = tt.dscalar('x')
+# y = x ** 2
+# gygx = tt.grad(y, x)
+# pp(gygx)
+# grad = theano.function([x], gygx)
+#
+# print(grad(2.344))
+#
+# x = tt.dmatrix('x')
+# s = tt.sum(1 / (1 + tt.exp(-x)))
+# gsgx = tt.grad(s, x)
+# dlogistic = theano.function([x], gsgx)
+#
+# print(dlogistic([[2, 3], [5, 7]]))
 
-print(grad(2.344))
+# seed = np.random.RandomState(0).randint(999999)
+# r = shared_randomstreams.RandomStreams(seed)
+# print(r)
 
-x = tt.dmatrix('x')
-s = tt.sum(1 / (1 + tt.exp(-x)))
-gsgx = tt.grad(s, x)
-dlogistic = theano.function([x], gsgx)
+# 二项分布
+x = tt.matrix('x')
+y = tt.fscalars('y')
+theano.config.floatX = 'float32'
 
-print(dlogistic([[2, 3], [5, 7]]))
+a = np.random.randn(10, 3)
+print('a: {}'.format(a))
+
+srng = shared_randomstreams.RandomStreams(np.random.RandomState(0).randint(999999))
+mask = srng.binomial(n=1, p=1 - y, size=x.shape)
+d = x * tt.cast(mask, theano.config.floatX)
+
+fun = theano.function([x, y], d)
+
+print(fun(a, 0.2))
+
+# sns.distplot(np.random.binomial(n=10, p=0.5, size=1000), hist=True, kde=False)
+#
+# plt.show()
+
+# print(np.random.binomial(n=1, p=0.5, size=(50, 10)))
